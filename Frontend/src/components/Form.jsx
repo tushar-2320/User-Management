@@ -22,7 +22,6 @@ function FormComponent() {
     try {
       const response = await axios.post("http://localhost:5000/contacts", formdata);
       console.log("Data submitted successfully", response.data);
-      // Reset the form fields
       setFormData({
         firstName: "",
         lastName: "",
@@ -39,7 +38,7 @@ function FormComponent() {
   return (
     <>
       <Typography variant="h4" align="center" gutterBottom>
-        Customer Management
+        User  Management
       </Typography>
       <Box sx={{ display: "flex", gap: 5, alignItems: "center", justifyContent: "center" }}>
         <form onSubmit={handleSubmit}>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
   Table,
@@ -8,88 +8,93 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Pagination,
   Typography,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Select,
+  MenuItem,
   TextField,
 } from "@mui/material";
 
-const CustomersList = () => {
-  const [customers, setCustomers] = useState([]);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(0);
-  const [editingCustomer, setEditingCustomer] = useState(null);
-  const [updatedDetails, setUpdatedDetails] = useState({});
-  const [showTable, setShowTable] = useState(false); // State to toggle table visibility
+const UserRoleManagement = () => {
+  const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [showTable, setShowTable] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newRole, setNewRole] = useState("");
+  const [editUserData, setEditUserData] = useState(null);
 
-  const fetchCustomers = async () => {
+
+  const fetchUsers = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/contacts", {
-        params: { page, pageSize },
-      });
-      setCustomers(response.data.customers);
-      setTotalPages(response.data.totalPages);
+      const response = await axios.get("http://localhost:5000/users");
+      setUsers(response.data.users);
     } catch (error) {
-      console.error("Error fetching customers:", error);
+      console.error("Error fetching users:", error);
+    }
+  };
+
+
+  const fetchRoles = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/roles");
+      setRoles(response.data.roles);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
     }
   };
 
   useEffect(() => {
     if (showTable) {
-      fetchCustomers();
+      fetchUsers();
+      fetchRoles();
     }
-  }, [showTable]); // Fetch data only when the table is shown
+  }, [showTable]);
 
-  const startEditing = (customer) => {
-    setEditingCustomer(customer._id);
-    setUpdatedDetails({
-      firstName: customer.firstName,
-      lastName: customer.lastName,
-      email: customer.email,
-      phoneNumber: customer.phoneNumber,
-      company: customer.company,
-      jobTitle: customer.jobTitle,
-    });
-  };
 
-  const handleUpdateChange = (e) => {
-    const { name, value } = e.target;
-    setUpdatedDetails((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const EditCustomer = async (event, CustomerId) => {
-    event.preventDefault();
+  const assignRoleToUser = async () => {
+    if (!selectedUser || !newRole) return;
     try {
-      const response = await axios.put(
-        `http://localhost:5000/contacts/${CustomerId}`,
-        updatedDetails
-      );
-      console.log("Customer Updated:", response.data);
-      setEditingCustomer(null);
-      fetchCustomers();
+      await axios.put(`http://localhost:5000/users/${selectedUser._id}/role`, {
+        role: newRole,
+      });
+      setSelectedUser(null);
+      setNewRole("");
+      fetchUsers();
     } catch (error) {
-      console.error("Error Updating Customer:", error);
+      console.error("Error assigning role to user:", error);
     }
   };
 
-  const DeleteCustomer = async (event, CustomerId) => {
-    event.preventDefault();
+
+  const editUser = async () => {
+    if (!editUserData) return;
     try {
-      const response = await axios.delete(
-        `http://localhost:5000/contacts/${CustomerId}`
-      );
-      console.log("Customer Deleted:", response.data);
-      fetchCustomers();
+      await axios.put(`http://localhost:5000/contacts/${editUserData._id}`, editUserData);
+      setEditUserData(null);
+      fetchUsers();
     } catch (error) {
-      console.error("Error Deleting Customer:", error);
+      console.error("Error updating user:", error);
+    }
+  };
+
+
+  const deleteUser = async (userId) => {
+    try {
+      await axios.delete(`http://localhost:5000/contacts/${userId}`);
+      fetchUsers();
+    } catch (error) {
+      console.error("Error deleting user:", error);
     }
   };
 
   return (
     <Paper sx={{ padding: 2, margin: 2 }}>
       <Typography variant="h4" align="center" gutterBottom>
-        Customer Management
+        User, Role, and Permission Management
       </Typography>
       <Button
         variant="contained"
@@ -100,143 +105,177 @@ const CustomersList = () => {
         Show Table
       </Button>
       {showTable && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell align="center">#</TableCell>
-                <TableCell align="center">First Name</TableCell>
-                <TableCell align="center">Last Name</TableCell>
-                <TableCell align="center">Email</TableCell>
-                <TableCell align="center">Phone Number</TableCell>
-                <TableCell align="center">Company</TableCell>
-                <TableCell align="center">Job Title</TableCell>
-                <TableCell align="center">Action</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {customers.map((customer, index) => (
-                <TableRow key={customer._id}>
-                  <TableCell align="center">
-                    {(page - 1) * pageSize + index + 1}
-                  </TableCell>
-                  <TableCell align="center">
-                    {editingCustomer === customer._id ? (
-                      <TextField
-                        name="firstName"
-                        value={updatedDetails.firstName}
-                        onChange={handleUpdateChange}
-                        size="small"
-                      />
-                    ) : (
-                      customer.firstName
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    {editingCustomer === customer._id ? (
-                      <TextField
-                        name="lastName"
-                        value={updatedDetails.lastName}
-                        onChange={handleUpdateChange}
-                        size="small"
-                      />
-                    ) : (
-                      customer.lastName
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    {editingCustomer === customer._id ? (
-                      <TextField
-                        name="email"
-                        value={updatedDetails.email}
-                        onChange={handleUpdateChange}
-                        size="small"
-                      />
-                    ) : (
-                      customer.email
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    {editingCustomer === customer._id ? (
-                      <TextField
-                        name="phoneNumber"
-                        value={updatedDetails.phoneNumber}
-                        onChange={handleUpdateChange}
-                        size="small"
-                      />
-                    ) : (
-                      customer.phoneNumber
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    {editingCustomer === customer._id ? (
-                      <TextField
-                        name="company"
-                        value={updatedDetails.company}
-                        onChange={handleUpdateChange}
-                        size="small"
-                      />
-                    ) : (
-                      customer.company
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    {editingCustomer === customer._id ? (
-                      <TextField
-                        name="jobTitle"
-                        value={updatedDetails.jobTitle}
-                        onChange={handleUpdateChange}
-                        size="small"
-                      />
-                    ) : (
-                      customer.jobTitle
-                    )}
-                  </TableCell>
-                  <TableCell align="center">
-                    {editingCustomer === customer._id ? (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={(e) => EditCustomer(e, customer._id)}
-                      >
-                        Save
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          variant="outlined"
-                          color="primary"
-                          onClick={() => startEditing(customer)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="secondary"
-                          onClick={(e) => DeleteCustomer(e, customer._id)}
-                        >
-                          Delete
-                        </Button>
-                      </>
-                    )}
-                  </TableCell>
+        <>
+          <TableContainer component={Paper} sx={{ marginTop: 4 }}>
+            <Typography variant="h5" sx={{ padding: 2 }}>
+              User Management
+            </Typography>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center">#</TableCell>
+                  <TableCell align="center">First Name</TableCell>
+                  <TableCell align="center">Last Name</TableCell>
+                  <TableCell align="center">Email</TableCell>
+                  <TableCell align="center">Phone</TableCell>
+                  <TableCell align="center">Company</TableCell>
+                  <TableCell align="center">Job Title</TableCell>
+                  <TableCell align="center">Role</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-      {showTable && (
-        <Pagination
-          count={totalPages}
-          page={page}
-          onChange={(e, value) => setPage(value)}
-          color="primary"
-          sx={{ display: "flex", justifyContent: "center", marginTop: 2 }}
-        />
+              </TableHead>
+              <TableBody>
+                {users.map((user, index) => (
+                  <TableRow key={user.id}>
+                    <TableCell align="center">{index + 1}</TableCell>
+                    <TableCell align="center">{user.firstName}</TableCell>
+                    <TableCell align="center">{user.lastName}</TableCell>
+                    <TableCell align="center">{user.email}</TableCell>
+                    <TableCell align="center">{user.phoneNumber}</TableCell>
+                    <TableCell align="center">{user.company}</TableCell>
+                    <TableCell align="center">{user.jobTitle}</TableCell>
+                    <TableCell align="center">
+                      {user.role?.name || "No Role"}
+                    </TableCell>
+                    <TableCell align="center">
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => setSelectedUser(user)}
+                        sx={{ marginRight: 1 }}
+                      >
+                        Assign Role
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => setEditUserData(user)}
+                        sx={{ marginRight: 1 }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={() => deleteUser(user._id)}
+                      >
+                        Delete
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+
+          {selectedUser && (
+            <Dialog
+              open={Boolean(selectedUser)}
+              onClose={() => setSelectedUser(null)}
+            >
+              <DialogTitle>Assign Role to {selectedUser.firstName}</DialogTitle>
+              <DialogContent>
+                <Select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                  fullWidth
+                >
+                  <MenuItem value="">Select Role</MenuItem>
+                  {roles.map((role) => (
+                    <MenuItem key={role.id} value={role.name}>
+                      {role.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setSelectedUser(null)}>Cancel</Button>
+                <Button variant="contained" color="primary" onClick={assignRoleToUser}>
+                  Assign Role
+                </Button>
+              </DialogActions>
+            </Dialog>
+          )}
+
+
+          {editUserData && (
+            <Dialog
+              open={Boolean(editUserData)}
+              onClose={() => setEditUserData(null)}
+            >
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogContent>
+                <TextField
+                  label="First Name"
+                  value={editUserData.firstName}
+                  onChange={(e) =>
+                    setEditUserData({ ...editUserData, firstName: e.target.value })
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  label="Last Name"
+                  value={editUserData.lastName}
+                  onChange={(e) =>
+                    setEditUserData({ ...editUserData, lastName: e.target.value })
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  label="Email"
+                  value={editUserData.email}
+                  onChange={(e) =>
+                    setEditUserData({ ...editUserData, email: e.target.value })
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  label="Phone"
+                  value={editUserData.phoneNumber}
+                  onChange={(e) =>
+                    setEditUserData({
+                      ...editUserData,
+                      phoneNumber: e.target.value,
+                    })
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  label="Company"
+                  value={editUserData.company}
+                  onChange={(e) =>
+                    setEditUserData({ ...editUserData, company: e.target.value })
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  label="Job Title"
+                  value={editUserData.jobTitle}
+                  onChange={(e) =>
+                    setEditUserData({ ...editUserData, jobTitle: e.target.value })
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setEditUserData(null)}>Cancel</Button>
+                <Button variant="contained" color="primary" onClick={editUser}>
+                  Save
+                </Button>
+              </DialogActions>
+            </Dialog>
+          )}
+        </>
       )}
     </Paper>
   );
 };
 
-export default CustomersList;
+export default UserRoleManagement;
